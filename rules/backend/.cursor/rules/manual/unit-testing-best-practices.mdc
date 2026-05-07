@@ -1,0 +1,64 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Best Practices Rule
+
+## Critical Rules
+
+### Best Practices
+These practices are recommended for best quality, maintainability, and saving time in your test codebase:
+
+- When resolving an instance in a test, always use `$this->app->make(ClassName::class)` instead of `new`. (You may also use `resolve(ClassName::class)`, but `$this->app->make` is preferred for consistency.) This ensures dependencies are injected via Laravel's service container and future-proofs your tests for constructor changes.
+- Prefer `TestFormRequest` for request validation tests and `TestCase` for other unit tests.
+- When using `app('service')` with a string argument in your code, use `$this->partialMock` to create a partial mock for the bound class, and override the binding with `$this->app->extend('service', fn () => $mock);` in your test.
+- If your code uses `Settings::get('key')`, use `$this->mockSiteSettings(['key' => value])` to override the value in your test.
+- For components with dependencies (repositories, services), use Laravel's container to inject mocks.
+- When interacting with Eloquent models or repositories, mock/stub all relevant methods (e.g., `cursor`, `getModel`, `newModelQuery`).
+- For components that perform side effects (e.g., deleting files), assert that the side effect method (e.g., `forceDelete`) is called.
+- Use `$this->createMockUser()` to create mocked user. In case your test case need more than one mocked user, you can pass the user id for the first method argument to generate different mocked users.
+- Use method `invokePrivateMethod` if you need to test private/protected methods. Example:
+```php
+$store = $this->app->make(Store::class);
+$result = $this->invokePrivateMethod([$store, 'verifyProductStatus'], ['identity' =>'any name', 'version' =>'1.0.2']);
+```
+- When testing code that uses static methods within a normal class, add the attribute `PHPUnit\Framework\Attributes\RunInSeparateProcess` on the top of method name. This ensures your test case can override loading the class without caring about other test cases in files. Use `\Mockery::mock("overload:\MetaFox\Platform\MetaFox")->makePartial();` to override class loading. Example:
+```php
+#[RunInSeparateProcess]
+public function mockGetResolation($resolution)
+{
+    $fox = \Mockery::mock("overload:\MetaFox\Platform\MetaFox")->makePartial();
+    $fox->shouldReceive('getResolution')
+        ->once()
+        ->andReturn($resolution);
+
+    self::assertSame($resolution, $fox->getResolution());
+}
+```
+
+### Mocking Filesystem
+When testing code that interacts with Laravel's filesystem, follow this pattern:
+
+```php
+// 1. Create a partial mock of Filesystem interface
+$filesystem = $this->partialMock(Filesystem::class);
+$filesystem->shouldReceive('delete')
+    ->with('test/file.jpg')
+    ->once();
+
+// 2. Create a partial mock of StorageService
+$storage = $this->partialMock(StorageService::class);
+$storage->shouldReceive('disk')
+    ->with('public')
+    ->once()
+    ->andReturn($filesystem);
+
+// 3. Bind the mocked StorageService to the container
+$this->app->instance('storage', $storage);
+```
+
+This pattern ensures:
+- The `disk()` method returns a proper `Filesystem` instance
+- File operations are performed on the `Filesystem` instance
+- The storage service is properly bound to the container

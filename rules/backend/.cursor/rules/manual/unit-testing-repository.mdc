@@ -1,0 +1,247 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Repository Unit Testing Rules
+
+## Core Setup Patterns
+
+### Basic Repository Test Setup
+```php
+protected Mockery\MockInterface $repository;
+protected Mockery\MockInterface $context;
+protected Mockery\MockInterface $eloquentBuilder;
+protected Mockery\MockInterface $policy;
+protected Mockery\MockInterface $repositoryModel;
+
+protected function setUp(): void
+{
+    parent::setUp();
+
+    // Model mock with proper class concatenation
+    $this->repositoryModel = Mockery::mock(Model::class . ',' . Model::class)
+        ->shouldAllowMockingProtectedMethods();
+
+    // Repository mock with partial implementation
+    $this->repository = Mockery::mock(Repository::class)
+        ->makePartial()
+        ->shouldAllowMockingProtectedMethods();
+
+    $this->eloquentBuilder = Mockery::mock(Builder::class);
+
+    // Prepare repository for mocking
+    $this->repository->prepareForMocking($this->repositoryModel);
+
+    // Common setup for query builder
+    $this->repositoryModel->shouldReceive('newQuery')
+        ->andReturn($this->eloquentBuilder);
+
+    $this->repositoryModel->shouldReceive('getTable')
+        ->andReturn('table_name');
+
+    // Setup policy mock
+    $this->policy = $this->mock(Policy::class);
+
+    // Setup global scope handling
+    $this->repositoryModel->shouldReceive('addGlobalScope')
+        ->zeroOrMoreTimes();
+}
+```
+
+## Query Builder Mocking
+
+### Where Clause Pattern
+```php
+$this->eloquentBuilder->shouldReceive('where')
+    ->with('column', '=', $value)
+    ->andReturnSelf();
+```
+
+### WhereIn Pattern
+```php
+$this->eloquentBuilder->shouldReceive('whereIn')
+    ->withSomeOfArgs('column')
+    ->andReturnSelf();
+```
+
+### Join Pattern
+```php
+$this->eloquentBuilder->shouldReceive('join')
+    ->with('table', 'first.id', '=', 'second.id')
+    ->andReturnSelf();
+```
+
+### Relationship Loading
+```php
+$this->eloquentBuilder->shouldReceive('with')
+    ->with(['relation1', 'relation2'])
+    ->andReturnSelf();
+```
+
+## Policy Testing
+
+### Authorization Check Pattern
+```php
+$this->policy->shouldReceive('methodName')
+    ->with($this->context, $model)
+    ->andReturn(true|false);
+
+$this->context->shouldReceive('can')
+    ->with('permission', [$model])
+    ->andReturn(true|false);
+```
+
+## Reference Parameter Handling
+
+### Method with Reference Parameter
+```php
+$this->repository->shouldReceive('methodName')
+    ->with(
+        Mockery::on(function ($arg) use ($expectedArg) {
+            return $arg === $expectedArg;
+        }),
+        Mockery::on(function (&$arg) {
+            return true;
+        })
+    )
+    ->andReturnUsing(function ($param1, &$param2) {
+        $param2 = ['modified' => 'value'];
+    });
+```
+
+## Event Handling
+
+### Event Dispatcher Pattern
+```php
+$dispatcher = Mockery::mock(Dispatcher::class);
+
+$dispatcher->shouldReceive('dispatch')
+    ->with('event.name', [$param], true)
+    ->once();
+
+$this->app->extend('events', fn () => $dispatcher);
+```
+
+## Common Test Patterns
+
+### CRUD Operation Tests
+1. Create Operation
+```php
+public function testCreate(): void
+{
+    // Setup attributes
+    $attributes = ['key' => 'value'];
+
+    // Mock policy check
+    $this->policy->shouldReceive('create')
+        ->andReturn(true);
+
+    // Mock model creation
+    $this->repository->shouldReceive('getModel')
+        ->andReturn($model);
+
+    $result = $this->repository->create($this->context, $attributes);
+    $this->assertInstanceOf(Model::class, $result);
+}
+```
+
+2. Update Operation
+```php
+public function testUpdate(): void
+{
+    $this->eloquentBuilder->shouldReceive('find')
+        ->with($id)
+        ->andReturn($model);
+
+    $this->policy->shouldReceive('update')
+        ->andReturn(true);
+
+    $result = $this->repository->update($this->context, $id, $attributes);
+    $this->assertInstanceOf(Model::class, $result);
+}
+```
+
+3. Delete Operation
+```php
+public function testDelete(): void
+{
+    $this->repository->shouldReceive('find')
+        ->with($id)
+        ->andReturn($model);
+
+    Queue::fake();
+    $result = $this->repository->delete($this->context, $id);
+    Queue::assertPushed(DeleteJob::class);
+}
+```
+
+### Pagination Tests
+```php
+public function testPagination(): void
+{
+    $this->eloquentBuilder->shouldReceive('paginate')
+        ->andReturn(Mockery::mock(Paginator::class));
+
+    $result = $this->repository->paginate($params);
+    $this->assertInstanceOf(Paginator::class, $result);
+}
+```
+
+## Best Practices
+
+### Test Method Organization
+1. Group related tests together
+2. Use descriptive test method names
+3. Test both success and edge cases
+4. Mock only what's necessary
+5. Use helper methods for common setup
+
+### Test Attributes
+1. Use `#[DoesNotPerformAssertions]` for void methods
+2. Add proper assertions for return values
+3. Test both success and failure cases
+
+### Error Handling
+1. Test exception cases
+2. Verify error responses
+3. Test validation failures
+
+### Mock Cleanup
+```php
+protected function tearDown(): void
+{
+    unset(
+        $this->repository,
+        $this->context,
+        $this->eloquentBuilder,
+        $this->policy,
+        $this->repositoryModel
+    );
+    parent::tearDown();
+}
+```
+
+## Common Assertions
+
+### Instance Assertions
+```php
+$this->assertInstanceOf(ExpectedClass::class, $result);
+$this->assertInstanceOf(Paginator::class, $result);
+$this->assertInstanceOf(Builder::class, $result);
+```
+
+### Value Assertions
+```php
+$this->assertTrue($result);
+$this->assertFalse($result);
+$this->assertNull($result);
+$this->assertEquals($expected, $actual);
+$this->assertIsArray($result);
+```
+
+### Exception Assertions
+```php
+$this->expectException(AuthorizationException::class);
+$this->expectException(ValidationException::class);
+```

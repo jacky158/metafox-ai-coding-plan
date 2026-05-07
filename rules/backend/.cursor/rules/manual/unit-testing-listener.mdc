@@ -1,0 +1,58 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Listener Rule
+
+## Critical Rules
+
+### Related Rules
+This rule must be used in conjunction with:
+- [Testing General Principles](.cursor/rules/manual/testing-general-principles.mdc) - For fundamental testing principles and practices
+- [Unit Testing Best Practices](.cursor/rules/manual/unit-testing-best-practices.mdc) - For general unit testing best practices
+
+### Listeners
+**Guidelines:**
+- Create a protected property for the listener (e.g., `protected ModelCreatedListener $listener;`) to reuse in all test cases.
+- Implement a `setUp` method in each listener test file as follows:
+
+```php
+protected ModelCreatedListener $listener;
+
+protected function setUp(): void
+{
+    parent::setUp();
+    $this->listener = $this->app->make(ModelCreatedListener::class);
+}
+```
+
+- Cover all public methods in the listener file. If the listener contains only a `handle` method, cover all branches and conditions in that method with separate test cases for each if/else branch.
+- Use descriptive test method names for each branch and condition.
+
+### Special Case: registerApplicationSchedule
+For listeners with a `registerApplicationSchedule` method that chains calls on the `Schedule` object, use the following pattern:
+
+```php
+public function testRegisterApplicationSchedule()
+{
+    $schedule = $this->partialMock(Schedule::class);
+
+    $schedule->shouldReceive('job')
+        ->once()
+        ->with(\MetaFox\Storage\Jobs\CleanUpDeletedStorageFiles::class)
+        ->andReturnSelf();
+
+    $schedule->shouldReceive('daily')
+        ->once()
+        ->andReturnSelf();
+
+    $schedule->shouldReceive('withoutOverlapping')
+        ->once()
+        ->andReturnSelf();
+
+    $this->listener->registerApplicationSchedule($schedule);
+}
+```
+
+This ensures all chained methods are properly mocked and the method is fully covered.

@@ -1,0 +1,41 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Job Rule
+
+## Critical Rules
+
+### Related Rules
+This rule must be used in conjunction with:
+- [Testing General Principles](.cursor/rules/manual/testing-general-principles.mdc) - For fundamental testing principles and practices
+- [Unit Testing Best Practices](.cursor/rules/manual/unit-testing-best-practices.mdc) - For general unit testing best practices
+
+### Jobs
+**Guidelines:**
+- Test that the job calls the expected repository/model methods.
+- Test that the job handles empty or invalid data gracefully.
+- Test that the job performs the expected side effects (e.g., deletes, updates).
+- Test that the job does not throw exceptions for valid input.
+
+### Example
+```php
+public function testHandleDeletesFiles()
+{
+    $mockFile = $this->createPartialMock(StorageFile::class, ['forceDelete', 'newModelQuery']);
+    $mockFile->expects($this->once())->method('forceDelete');
+    $queryBuilder = resolve(\Illuminate\Database\Query\Builder::class);
+    $eloquentBuilder = $this->getMockBuilder(\Illuminate\Database\Eloquent\Builder::class)
+        ->setConstructorArgs([$queryBuilder])
+        ->onlyMethods(['cursor'])
+        ->getMock();
+    $eloquentBuilder->method('cursor')->willReturn(new LazyCollection([$mockFile]));
+    $mockFile->method('newModelQuery')->willReturn($eloquentBuilder);
+    $this->partialMock(FileRepositoryInterface::class, function ($mock) use ($mockFile) {
+        $mock->allows('getModel')->andReturns($mockFile);
+    });
+    $job = new CleanUpDeletedStorageFiles();
+    $job->handle();
+}
+```

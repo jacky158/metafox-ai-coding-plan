@@ -1,0 +1,190 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Rule Rule
+
+## Critical Rules
+
+### Related Rules
+This rule must be used in conjunction with:
+- [Testing General Principles](.cursor/rules/manual/testing-general-principles.mdc) - For fundamental testing principles and practices
+- [Unit Testing Best Practices](.cursor/rules/manual/unit-testing-best-practices.mdc) - For general unit testing best practices
+
+### Rules
+
+#### Guidelines for Testing Validation Rules
+
+1. **For Rules implementing `Illuminate\Contracts\Validation\Rule`**:
+   ```php
+   namespace MetaFox\User\Tests\Unit\Rules;
+
+   use MetaFox\User\Models\CancelReason;
+   use MetaFox\User\Rules\ActiveReasonRule;
+   use Tests\TestCase;
+
+   class ActiveReasonRuleTest extends TestCase
+   {
+       protected ActiveReasonRule $rule;
+
+       protected function setUp(): void
+       {
+           parent::setUp();
+           $this->rule = $this->app->make(ActiveReasonRule::class);
+       }
+
+       public function testPassesWithValidReason(): void
+       {
+           $model = CancelReason::factory()->create();
+           $this->assertInstanceOf(CancelReason::class, $model);
+           $result = $this->rule->passes('reason', $model->entityId());
+           $this->assertTrue($result);
+       }
+
+       public function testFailsWithInvalidReason(): void
+       {
+           $this->assertFalse($this->rule->passes('reason', 0));
+       }
+
+       public function testMessage(): void
+       {
+           $this->assertIsString($this->rule->message());
+       }
+   }
+   ```
+
+2. **For Rules implementing `Illuminate\Contracts\Validation\ValidationRule`**:
+   ```php
+   namespace MetaFox\User\Tests\Unit\Rules;
+
+   use MetaFox\User\Rules\ValidatePasswordRule;
+   use Mockery\MockInterface;
+   use Tests\TestCase;
+   use Tests\Traits\TestValidationRule;
+
+   class ValidatePasswordRuleTest extends TestCase
+   {
+       use TestValidationRule;
+
+       protected MockInterface $user;
+
+       protected function setUp(): void
+       {
+           parent::setUp();
+           $this->user = $this->createMockUser();
+           $this->ruleArgs = [
+               'context' => $this->user,
+           ];
+       }
+
+       public function testValidateSuccess(): void
+       {
+           $this->user->shouldReceive('validatePassword')
+               ->once()
+               ->andReturn(true);
+
+           $this->assertRulePassed('password', '123456');
+       }
+
+       public function testValidateFailed(): void
+       {
+           $this->user->shouldReceive('validatePassword')
+               ->once()
+               ->andReturn(false);
+
+           $this->assertRuleFailed('password', '123456');
+       }
+
+       public function ruleClassName(): string
+       {
+           return ValidatePasswordRule::class;
+       }
+   }
+   ```
+
+#### Key Differences
+- `Rule` interface:
+  - Extend `TestCase` directly
+  - Create rule instance using `$this->app->make()` in `setUp()`
+  - Test both success and failure cases for `passes()` method
+  - Test `message()` method
+  - Use factories for creating test data when needed
+  - No need for `TestValidationRule` trait
+
+- `ValidationRule` interface:
+  - Use `TestValidationRule` trait
+  - Set up `ruleArgs` in `setUp()`
+  - Use `assertRulePassed()` and `assertRuleFailed()`
+  - Implement `ruleClassName()`
+  - Mock dependencies as needed
+
+#### Best Practices
+- Mock external dependencies (e.g., repositories, services)
+- Test both success and failure cases
+- Test custom error messages
+- Keep tests focused and isolated
+- Follow the Arrange-Act-Assert pattern
+- Use `$this->app->make()` for resolving dependencies
+- Use factories for creating test data
+- Test with both valid and invalid inputs
+
+#### Common Patterns
+- For `Rule`:
+  ```php
+  protected function setUp(): void
+  {
+      parent::setUp();
+      $this->rule = $this->app->make(CustomRule::class);
+  }
+
+  public function testPassesWithValidInput(): void
+  {
+      $model = Model::factory()->create();
+      $this->assertTrue($this->rule->passes('field', $model->id));
+  }
+
+  public function testFailsWithInvalidInput(): void
+  {
+      $this->assertFalse($this->rule->passes('field', 0));
+  }
+
+  public function testMessage(): void
+  {
+      $this->assertIsString($this->rule->message());
+  }
+  ```
+
+- For `ValidationRule`:
+  ```php
+  protected function setUp(): void
+  {
+      parent::setUp();
+      $this->ruleArgs = [
+          'context' => $this->createMockUser(),
+      ];
+  }
+
+  public function testValidateSuccess(): void
+  {
+      $this->assertRulePassed('field', 'value');
+  }
+
+  public function testValidateFailed(): void
+  {
+      $this->assertRuleFailed('field', 'value');
+  }
+
+  public function ruleClassName(): string
+  {
+      return CustomRule::class;
+  }
+  ```
+
+#### Error Handling
+- Test invalid input types
+- Test null or empty values
+- Test maximum/minimum values
+- Test format requirements
+- Test custom validation logic
+- Test with non-existent IDs or invalid references

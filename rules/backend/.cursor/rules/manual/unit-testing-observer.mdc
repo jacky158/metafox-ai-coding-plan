@@ -1,0 +1,116 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Observer Rule
+
+## Critical Rules
+
+### Related Rules
+This rule must be used in conjunction with:
+- [Testing General Principles](.cursor/rules/manual/testing-general-principles.mdc) - For fundamental testing principles and practices
+- [Unit Testing Best Practices](.cursor/rules/manual/unit-testing-best-practices.mdc) - For general unit testing best practices
+
+### Observer Test Setup
+**Guidelines:**
+1. Create protected properties for the observer and its dependencies:
+```php
+protected ObserverClass $observer;
+protected Dispatcher $eventDispatcher;
+protected RepositoryInterface $repository;
+```
+
+2. Implement setUp method to mock dependencies and create partial observer:
+```php
+protected function setUp(): void
+{
+    parent::setUp();
+    
+    // Mock dependencies
+    $this->eventDispatcher = Mockery::mock(Dispatcher::class);
+    $this->repository = Mockery::mock(RepositoryInterface::class);
+    
+    // Bind mocks to container
+    $this->app->extend('events', fn () => $this->eventDispatcher);
+    
+    // Create partial mock of observer
+    $this->observer = Mockery::mock(ObserverClass::class, [$this->repository])
+        ->makePartial()
+        ->shouldAllowMockingProtectedMethods();
+}
+```
+
+### Testing Protected Methods
+Use `invokePrivateMethod` from TestCase:
+```php
+// Format: [$object, 'methodName'], ...$parameters
+$this->invokePrivateMethod([$this->observer, 'methodName'], $param1, $param2);
+```
+
+### Mock Expectations
+1. Event Dispatcher:
+```php
+$this->eventDispatcher->shouldReceive('dispatch')
+    ->with('event.name', [$param], true)
+    ->times(1);
+```
+
+2. Model Attributes:
+```php
+$model->shouldReceive('getAttribute')
+    ->with('attribute_name')
+    ->andReturn($value);
+
+$model->shouldReceive('getOriginal')
+    ->with('attribute_name')
+    ->andReturn($originalValue);
+```
+
+3. Relationship Loading:
+```php
+$model->shouldReceive('load')
+    ->with(['relationship'])
+    ->once();
+```
+
+### Test Method Requirements
+1. Test all observer methods (created, updated, deleted, etc.)
+2. Test protected methods that contain business logic
+3. Test both success and failure scenarios
+4. Test null/invalid input handling
+5. Verify all side effects (events, updates, etc.)
+6. Use descriptive test method names
+7. Document complex test scenarios
+
+### Example Test Method
+```php
+#[DoesNotPerformAssertions]
+public function testUpdatedWithAlbumChange(): void
+{
+    // Setup test data
+    $item = Mockery::mock(AlbumItem::class);
+    $album = Mockery::mock(Album::class)->makePartial();
+    
+    // Mock method calls
+    $item->shouldReceive('isDirty')
+        ->with(['album_id'])
+        ->andReturnTrue();
+        
+    $item->shouldReceive('getAttribute')
+        ->with('album_id')
+        ->andReturn(2);
+        
+    // Test observer method
+    $this->observer->updated($item);
+}
+```
+
+### Common Mistakes to Avoid
+1. ❌ Using local invokePrivateMethod implementation
+2. ❌ Not mocking all required dependencies
+3. ❌ Incorrect parameter format for invokePrivateMethod
+4. ❌ Not testing protected methods
+5. ❌ Missing side effect verifications
+6. ❌ Incomplete mock expectations
+7. ❌ Not testing error scenarios

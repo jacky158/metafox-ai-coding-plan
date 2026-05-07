@@ -1,0 +1,38 @@
+# MetaFox Backend — AI coding conventions
+
+This project is **Laravel 12+** on **PHP 8.2+**. Code lives in `app/`, `packages/platform/`, and `packages/framework/<feature>/`. Finer-grained rules live under `.cursor/rules/` (`.mdc`); follow those when they apply. Prefer matching existing code in the same package over inventing new patterns.
+
+## Official references (bookmark for correct API usage)
+
+- **Laravel 12:** https://laravel.com/docs/12.x  
+- **PHP:** https://www.php.net/manual/en/lang.types.declarations.php (strict types, enums)  
+- **PSR-12:** https://www.php-fig.org/psr/psr-12/
+
+## Non-negotiables
+
+- `declare(strict_types=1);` in new PHP files where the project already uses it.
+- **PSR-12**; run project CS fixer / static analysis when touching many files.
+- **Modular packages:** feature code under `packages/framework/<name>/` (Http, Models, Repositories, Jobs, etc.), not a single flat `app/` only.
+- **Repositories:** use **prettus/l5-repository** patterns already present in the module; extend the project’s `AbstractRepository` / interfaces.
+- **HTTP:** validate with **Form Requests**; API responses via **JsonResource** / collections consistent with the package.
+- **Routes:** respect split route files (`api.php`, `api-staff.php`, `web.php`, package routes) and existing naming.
+- **Auth / API:** Laravel Passport; respect existing middleware stacks (`Localization`, etc.).
+- **i18n / phrases:** use MetaFox localize / `__p()` and phrase keys; do not embed user-facing English in random strings without going through the phrase system.
+- **Queues:** notifications / jobs often implement `ShouldQueue` — follow existing queue usage.
+
+## Architecture habits
+
+- **Controllers:** slim; inject repositories / services; delegate domain logic out of actions where the codebase already does.
+- **Models:** Eloquent; relationships and casts like sibling models in the same module.
+- **Settings / Platform:** `MetaFox\Platform` facades and contracts — discover via existing imports in the same feature.
+
+## Tests
+
+- PHPUnit config in `phpunit.xml`; package tests under `packages/**/tests/`.  
+- For patterns, see `.cursor/rules/manual/` (controllers, repositories, notifications, etc.).
+
+## What not to do
+
+- Do not reference `vendor/` paths in new code (extend / bind in service providers like existing modules).
+- Do not bypass package boundaries (e.g. raw SQL in controllers when a repository exists).
+- Do not commit secrets; `.env` is local only.

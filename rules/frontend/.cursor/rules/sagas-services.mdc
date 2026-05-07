@@ -1,0 +1,53 @@
+---
+description: Redux sagas, MetaFox services, and gateway API calls
+globs: "**/{sagas,services}/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Sagas
+
+Use the MetaFox saga header and wiring with `takeEvery` / `takeLatest` as in existing sagas:
+
+```typescript
+/**
+ * @type: saga
+ * name: feature.saga.actionName
+ */
+import { LocalAction, viewItem } from '@metafox/framework';
+import { takeEvery } from 'redux-saga/effects';
+
+function* actionName({ payload }: LocalAction<{ id: string }>) {
+  yield* viewItem('resource', 'type', payload.id);
+}
+
+const sagas = [takeEvery('@event/resource', actionName)];
+
+export default sagas;
+```
+
+# Services
+
+Service classes use the `@type: service` block, `name`, and `bootstrap(manager: Manager)` when registering with `@metafox/manager`, matching files under existing `packages/`.
+
+```typescript
+/**
+ * @type: service
+ * name: featureService
+ */
+export default class FeatureService {
+  bootstrap(manager: Manager) { /* ... */ }
+}
+```
+
+# Gateway API calls
+
+Prefer **`getResourceAction`** + **`apiClient`** + **`compactData`** for gateway URLs (they read WebSetting / admin resource bindings). Avoid hardcoding REST paths that duplicate gateway entries.
+
+```typescript
+const { apiClient, getResourceAction, compactData } = yield* getGlobalContext();
+const action = yield* getResourceAction('resourceName', 'actionName');
+const url = compactData(action.apiUrl, payload);
+const response = yield apiClient.request({ url, method: action.apiMethod, data: payload });
+```
+
+Direct `apiClient.get('/path')` is only acceptable for stable bootstrap endpoints (e.g. `core/web/settings/...`) where neighboring code already does the same.

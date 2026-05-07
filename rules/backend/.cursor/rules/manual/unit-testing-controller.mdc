@@ -1,0 +1,104 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Controller Rule
+
+## Critical Rules
+
+### Related Rules
+This rule must be used in conjunction with:
+- [Testing General Principles](.cursor/rules/manual/testing-general-principles.mdc) - For fundamental testing principles and practices
+- [Unit Testing Best Practices](.cursor/rules/manual/unit-testing-best-practices.mdc) - For general unit testing best practices
+
+### Controllers
+**Guidelines:**
+- Mock all dependencies injected into the controller (repositories, services, etc.).
+- If the controller has only one repository, create a partial mocked repository and assign it to a protected property (e.g., `protected MockInterface $repository;`).
+- If the controller has more than one repository, create multiple partial mocked repositories and assign them to separate protected properties.
+- Always create a protected property for the controller (e.g., `protected Controller $controller;`) to reuse in all test cases.
+- Implement a `setUp` method in each controller test file as follows:
+
+```php
+protected Controller $controller;
+protected MockInterface $repository;
+
+protected function setUp(): void
+{
+    parent::setUp();
+    $this->repository = $this->partialMock(Repository::class);
+    $this->controller = $this->app->make(Controller::class);
+}
+```
+
+- If a controller method contains a FormRequest as an argument, use the `mockRequest` method from the `Tests\Traits\TestControllerAction` trait to create the request:
+
+```php
+use Tests\Traits\TestControllerAction;
+
+// ...
+
+use TestControllerAction;
+
+public function testStore()
+{
+    $params = [];
+    $request = $this->mockRequest(StoreRequest::class, $params);
+    $this->repository->shouldReceive('create')
+        ->with($params)
+        ->once()
+        ->andReturn(new Asset());
+
+    $result = $this->app->call([$this->controller, 'store'], compact('request'));
+    $this->assertInstanceOf(AssetItem::class, $result);
+}
+```
+
+- Use Laravel's container to inject mocks.
+- **Always use** `$this->app->call([$this->controller, 'method'], [...])` to invoke controller actions in tests, passing parameters as an associative array. This ensures Laravel resolves dependencies and route-model bindings as in real requests.
+- Test each public method (action) for:
+  - Success (happy path)
+  - Validation errors
+  - Not found (e.g., ModelNotFoundException)
+  - Authorization (if applicable)
+  - Error handling (e.g., exceptions, failed operations)
+- Assert the structure and content of the response (status, data, error messages).
+- Use `assertJson`, `assertStatus`, and similar helpers for API responses.
+
+### Example Case
+```php
+namespace MetaFox\Storage\Tests\Unit\Http\Controllers\Api\v1;
+
+use Tests\Traits\TestControllerAction;
+use MetaFox\Storage\Http\Controllers\Api\v1\AssetAdminController as Controller;
+use MetaFox\Storage\Repositories\AssetRepositoryInterface as Repository;
+
+class AssetAdminControllerTest extends TestCase
+{
+    use TestControllerAction;
+
+    protected Controller $controller;
+    protected MockInterface $repository;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->repository =  $this->partialMock(Repository::class);
+        $this->controller = $this->app->make(Controller::class);
+    }
+
+    public function testStore()
+    {
+        $params  = [];
+        $request= $this->mockRequest(StoreRequest::class, $params);
+        $this->repository->shouldReceive('create')
+            ->with($params)
+            ->once()
+            ->andReturn(new Asset());
+
+        $result = $this->app->call([$this->controller, 'store'], ['request'=>$request]);
+        $this->assertInstanceOf(AssetItem::class, $result);
+    }
+}
+```

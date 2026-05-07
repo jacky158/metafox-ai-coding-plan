@@ -1,0 +1,93 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Model Rule
+
+## Critical Rules
+
+### Related Rules
+This rule must be used in conjunction with:
+- [Testing General Principles](.cursor/rules/manual/testing-general-principles.mdc) - For fundamental testing principles and practices
+- [Unit Testing Best Practices](.cursor/rules/manual/unit-testing-best-practices.mdc) - For general unit testing best practices
+
+### Models
+
+#### Model Interface and Type Testing
+- Test if model implements required interfaces (e.g., `Entity`)
+- Test entity type and table name
+- Test fillable fields and appends
+```php
+public function testImplementsInterfaces(): void
+{
+    $this->assertInstanceOf(Entity::class, $this->model);
+}
+
+public function testEntityType(): void
+{
+    $this->assertEquals('storage_disks', $this->model->entityType());
+}
+
+public function testTableName(): void
+{
+    $this->assertEquals('storage_disks', $this->model->getTable());
+}
+```
+
+#### Relation Testing
+- Test relations by calling the relation method (e.g., `file()`)
+- Assert the relation type (e.g., `BelongsTo`, `HasMany`)
+- Don't test resolved models directly
+```php
+public function testFileRelation(): void
+{
+    $relation = $this->model->file();
+    $this->assertInstanceOf(BelongsTo::class, $relation);
+}
+```
+
+#### Model Event Testing
+- Test model events using `invokePrivateMethod`
+- Use `#[DoesNotPerformAssertions]` for tests that don't assert
+```php
+#[DoesNotPerformAssertions]
+public function testModelDeletedEvent(): void
+{
+    $settings = Settings::partialMock();
+    $settings->shouldReceive('destroy')
+        ->with('storage', ['storage.disks.test_disk'])
+        ->once();
+    $this->invokePrivateMethod([$model, 'fireModelEvent'], 'deleted');
+}
+```
+
+#### Model Attribute Testing
+- Test computed attributes (getters)
+- Test attribute casting
+- Test attribute appends
+```php
+public function testGetUrlAttribute(): void
+{
+    $storage = $this->partialMock('MetaFox\Storage\Storage');
+    $storage->shouldReceive('getUrl')
+        ->with(1)
+        ->andReturn('http://example.com/test.jpg');
+    $this->app->instance('storage', $storage);
+    $this->model->file_id = 1;
+    $this->assertEquals('http://example.com/test.jpg', $this->model->url);
+}
+```
+
+#### Model Method Testing
+- Test public methods
+- Use `invokePrivateMethod` for protected/private methods
+- Test method return values and side effects
+```php
+public function testIsModified(): void
+{
+    $this->model->file_id = null;
+    $this->model->local_path = MetaFoxConstant::EMPTY_STRING;
+    $this->assertFalse($this->model->isModified());
+}
+```

@@ -1,0 +1,29 @@
+---
+description: Core MetaFox frontend stack, layout, and ground rules for every session
+alwaysApply: true
+---
+
+# MetaFox frontend — stack & ground rules
+
+**Stack:** React 18, TypeScript, **MUI v6**, Emotion, Redux + **redux-saga**, workspace packages `@metafox/*`. Match neighboring files in the same package over generic tutorials.
+
+## Workspace layout
+
+- Monorepo via `pnpm-workspace.yaml` → `packages/*/*` (e.g. `packages/framework/metafox-core`, `packages/framework/metafox-ui`, `packages/framework/core` for app feature code).
+- **Imports:** use `@metafox/framework`, `@metafox/core`, `@metafox/ui`, etc. — follow existing aliases; never reach into deep bundle paths.
+- Do not bypass the Manager/bootstrap pattern (`@metafox/manager`); register services through their providers.
+- API calls flow through the gateway: `apiClient` + `getResourceAction` + `compactData`. Detailed patterns live in `sagas-services.mdc`.
+
+## Official references
+
+- React: https://react.dev
+- TypeScript: https://www.typescriptlang.org/docs/
+- MUI v6: https://mui.com/material-ui/
+- Emotion / styled: https://mui.com/system/styled/
+
+## What not to do
+
+- Do not introduce Tailwind unless the file already uses it.
+- Do not add duplicate global state when Redux + existing reducers/sagas already cover the flow.
+- Do not edit generated bundles under `app/src/bundle-*` (web/admincp/installation/call) — edit source packages instead.
+- Do not commit env secrets (`.env*`).

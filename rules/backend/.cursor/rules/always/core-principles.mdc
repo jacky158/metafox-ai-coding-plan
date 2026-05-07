@@ -1,0 +1,111 @@
+---
+description: This rule defines the fundamental principles and standards that must be followed in all code development. It must be followed when: (1) Writing new code, (2) Modifying existing code, (3) Reviewing code, or (4) Making architectural decisions. The rule ensures consistent code quality, maintainability, and adherence to best practices across the entire codebase. It's particularly crucial for maintaining code standards, ensuring proper architecture, and validating implementation approaches.
+globs:
+alwaysApply: true
+---
+# Core Principles Rule
+
+## Critical Rules
+
+### Core Development Principles
+- Write concise, technical responses with accurate PHP/Laravel examples
+- Follow SOLID principles and clean architecture
+- Use consistent, descriptive names for variables, methods, and classes
+- Prefer modularization over duplication for code reuse
+- Use prettus/l5-repository for the repository pattern
+
+### Dependencies
+- Use Laravel 12.0+
+- Use PHP 8.2+
+- Use Composer for dependency management
+
+### PHP and Laravel Standards
+- Follow PSR-12 coding standards
+- Use `declare(strict_types=1);` for strict typing
+- Leverage Laravel's built-in features:
+  - Validation
+  - Middleware
+  - Eloquent ORM
+  - Query builder
+  - Migrations
+  - Seeders
+- Use Laravel's advanced features:
+  - Caching
+  - Pagination
+  - Job queues
+  - API resources
+- Implement proper:
+  - Error handling
+  - Logging
+  - Security measures
+- Use Laravel Telescope for debugging and performance monitoring
+
+### Code Architecture
+#### Modular Design
+- Organize code into modules/packages
+- Follow Laravel's conventions
+- Use singular models
+- Use PascalCase for classes
+
+#### Controllers
+- Use dependency injection
+- Follow RESTful conventions
+- Use resource controllers
+- Use API controllers
+
+#### Models
+- Use Eloquent with `HasFactory`
+- Use model relationships
+- Use proper model events
+
+#### Routing
+- Separate routes into:
+  - `api.php`
+  - `api-staff.php`
+  - `sharing.php`
+  - `web.php`
+- Use proper route naming
+- Use proper route grouping
+
+#### Type System
+- Use explicit return types
+- Use type hints
+- Use strict type declarations
+- Use proper type casting
+
+#### Error Handling
+- Use Laravel's exception handling
+- Use custom exceptions
+- Implement proper logging
+- Use proper error responses
+
+### Key Points
+#### MVC Architecture
+- Follow Laravel's MVC pattern
+- Separate concerns properly
+- Use proper model relationships
+- Use proper view components
+
+#### Validation
+- Use Form Requests
+- Implement custom validation rules
+- Use proper validation messages
+- Handle validation errors properly
+
+#### API Development
+- Implement API versioning
+- Use structured responses
+- Use proper status codes
+- Use proper response formats
+
+#### Performance
+- Use caching effectively
+- Implement database indexing
+- Use database transactions
+- Optimize queries
+
+#### Automation
+- Use scheduling for tasks
+- Implement event listeners
+- Use proper job queues
+- Automate repetitive tasks

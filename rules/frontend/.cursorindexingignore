@@ -1,0 +1,13 @@
+# Optional: exclude from semantic index only (narrower than .cursorignore in some setups).
+# Keeps Tab/@-mention usable for paths you still want occasionally.
+
+node_modules
+dist
+app/src/bundle-web
+app/src/bundle-admincp
+app/src/bundle-installation
+app/src/bundle-call
+/builds
+exports
+coverage
+*.tsbuildinfo

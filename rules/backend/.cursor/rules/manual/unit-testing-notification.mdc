@@ -1,0 +1,186 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Notification Unit Testing Rules
+
+## Base Test Structure
+
+### Test Class Setup
+```php
+namespace MetaFox\{Module}\Tests\Unit\Notifications;
+
+use Tests\TestCase;
+use Mockery;
+use Illuminate\Contracts\Events\Dispatcher;
+use MetaFox\Platform\Contracts\User;
+use MetaFox\Platform\Contracts\IsNotifiable;
+use MetaFox\Notification\Messages\MailMessage;
+
+class {NotificationType}NotificationTest extends TestCase
+{
+    protected {NotificationType}Notification $notification;
+    protected Dispatcher $eventDispatcher;
+    protected User $user;
+    
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        $this->eventDispatcher = Mockery::mock(Dispatcher::class);
+        $this->app->extend('events', fn () => $this->eventDispatcher);
+        
+        $this->user = $this->createMockUser();
+        // Setup specific mocks for your notification
+    }
+}
+```
+
+### Available Helper Methods
+The base `TestCase` class provides several helper methods for notification testing:
+
+1. `createMockNotifiable()`: Creates a mock notifiable instance with standard methods:
+   - `preferredLocale()`: Returns 'en'
+   - `entityId()`: Returns 1
+   - `entityType()`: Returns 'user'
+
+### Required Mock Methods
+
+Model Mock:
+```php
+$model->shouldReceive('entityId')->andReturn(1);
+$model->shouldReceive('entityType')->andReturn('resource_type');
+$model->shouldReceive('userId')->andReturn(1);
+$model->shouldReceive('userType')->andReturn('user');
+$model->shouldReceive('toArray')->andReturn([
+    'id' => 1,
+    'resource_name' => 'resource_type',
+]);
+```
+
+## Required Test Cases
+
+### 1. Array Representation
+```php
+public function testToArray(): void
+{
+    // Test approved case
+    $this->model->shouldReceive('isApproved')->andReturn(true);
+    $notifiable = $this->createMockNotifiable(); // Available from base TestCase
+    
+    $result = $this->notification->toArray($notifiable);
+    
+    $this->assertEquals([
+        'data' => [
+            'id' => 1,
+            'resource_name' => 'resource_type',
+            'message' => 'Expected message',
+        ],
+        'item_id' => 1,
+        'item_type' => 'resource_type',
+        'user_id' => 1,
+        'user_type' => 'user',
+    ], $result);
+    
+    // Test pending case if applicable
+    $this->model->shouldReceive('isApproved')->andReturn(false);
+    // Assert pending state
+}
+```
+
+### 2. URL Generation
+```php
+public function testToUrl(): void
+{
+    // Test approved case
+    $this->model->shouldReceive('isApproved')->andReturn(true);
+    $this->model->shouldReceive('toUrl')->andReturn('https://example.com/resource/1');
+    
+    $result = $this->notification->toUrl();
+    $this->assertEquals('https://example.com/resource/1', $result);
+    
+    // Test pending case if applicable
+    $this->model->shouldReceive('isApproved')->andReturn(false);
+    // Test pending URL generation
+}
+```
+
+### 3. Mail Message
+```php
+public function testToMail(): void
+{
+    $notifiable = $this->createMockNotifiable(); // Available from base TestCase
+    $this->model->shouldReceive('toUrl')->andReturn('https://example.com/resource/1');
+    
+    $result = $this->notification->toMail($notifiable);
+    
+    $this->assertInstanceOf(MailMessage::class, $result);
+}
+```
+
+### 4. Mobile Message
+```php
+public function testToMobileMessage(): void
+{
+    $notifiable = $this->createMockNotifiable(); // Available from base TestCase
+    $this->model->shouldReceive('toUrl')->andReturn('https://example.com/resource/1');
+    $this->model->shouldReceive('toRouter')->andReturn('@resource/1');
+    
+    $result = $this->notification->toMobileMessage($notifiable);
+    
+    $this->assertEquals([
+        'message' => strip_tag_content($this->notification->callbackMessage()),
+        'url' => 'https://example.com/resource/1',
+        'router' => '@resource/1',
+    ], $result);
+}
+```
+
+## Testing Guidelines
+
+### 1. State Testing
+- Always test both approved and pending states when applicable
+- Test state transitions if the notification handles them
+- Verify correct message/URL generation for each state
+
+### 2. Mock Requirements
+- Mock only the methods that are actually called
+- Use type hints for all mocks
+- Set up expectations for method calls that affect behavior
+
+### 3. Assertion Best Practices
+- Use specific assertions (assertEquals over assertTrue)
+- Test complete array structures
+- Verify all notification channels (mail, mobile, web)
+- Test localization handling
+
+### 4. Error Cases
+- Test with invalid/missing model
+- Test with missing permissions
+- Test with invalid states
+- Test with missing dependencies
+
+## Channel Configuration
+```php
+[
+    'type' => 'notification_type',
+    'module_id' => 'module_name',
+    'handler' => NotificationClass::class,
+    'title' => 'module::phrase.notification_type',
+    'is_request' => 0,
+    'is_system' => 1,
+    'can_edit' => 1,
+    'channels' => ['database', 'mail', 'mobilepush', 'webpush'],
+]
+```
+
+## Common Gotchas
+1. Always mock `isApproved()` before calling URL-related methods
+2. Remember to test both approved and pending message variants
+3. Ensure proper cleanup in tearDown() if needed
+4. Mock all required model relationships
+5. Test notification preferences if applicable
+6. Verify proper event dispatching
+7. Test channel-specific formatting
+8. Use `createMockNotifiable()` from base TestCase instead of implementing your own

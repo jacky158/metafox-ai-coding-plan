@@ -1,0 +1,18 @@
+# Cursor: exclude from AI context & codebase indexing (see also .cursorindexingignore)
+
+node_modules
+dist
+.swc
+coverage
+storybook-static
+**/.docz
+/builds
+exports
+input
+*.tsbuildinfo
+
+# Generated bundles (large; edit packages/ sources instead)
+app/src/bundle-web
+app/src/bundle-admincp
+app/src/bundle-installation
+app/src/bundle-call

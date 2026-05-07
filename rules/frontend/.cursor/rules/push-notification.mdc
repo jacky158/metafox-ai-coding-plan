@@ -1,0 +1,29 @@
+---
+description: Web push & FCM registration — MetaFox frontend
+globs:
+alwaysApply: false
+---
+
+# Push notification (frontend)
+
+## Primary files
+
+| Area | Path |
+|------|------|
+| Permission banner | `packages/framework/core/src/dialogs/RequestNotificationWebPush/RequestBanner.tsx` |
+| Register token saga | `packages/framework/core/src/sagas/registerFCM.tsx` |
+| Firebase hook | `packages/framework/metafox-core/src/firebase/FirebaseHooks/useFirebaseFCM.tsx` |
+| Service worker | `app/public/firebase-messaging-sw.js` |
+| Logout / cookies | `packages/framework/user/src/sagas/logout.tsx`, `packages/framework/user/src/sagas/bootstrap.ts` |
+
+## Flow
+
+1. **`useFirebaseFCM()`** (`@metafox/framework/firebase`) obtains token; banner dispatches **`@registerFCM`** with `{ token }`.
+2. **`registerFCM`** loads **`getResourceAction('authorization','user_device','addItem')`**, **POST** via `apiClient` with **`token_source: 'firebase'`** and **`device_token`**; sets cookies **`fcm-token`**, **`fcm-notification`** on success.
+3. **Background**: service worker shows notification from `payload.data` (`title`, `body`, `web_link`).
+
+## Conventions
+
+- Do not hardcode REST URLs — use **`getResourceAction`** + **`compactData(apiParams, …)`** like `registerFCM`.
+- Align **`token_source`** / payload fields with backend **`MetaFox\Authorization\Http\Requests\v1\Device\StoreRequest`** (sibling `backend` repo) and Firebase config on the server.
+- Service worker must stay in **`app/public/`** scope; keep **`firebaseConfig`** in sync with deployment.

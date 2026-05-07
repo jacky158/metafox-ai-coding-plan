@@ -1,0 +1,3 @@
+# Optional: paths to skip for semantic index only (see Cursor docs). Heavy generated/public assets.
+public/assets
+public/coverage

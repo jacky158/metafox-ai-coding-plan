@@ -1,0 +1,224 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Policy Testing Rules
+
+## Core Principles
+
+### Test File Structure
+1. Extend `Tests\TestCase`
+2. Use descriptive test method names that indicate:
+   - Method being tested
+   - Scenario being tested
+   - Expected outcome
+
+```php
+class PhotoPolicyTest extends TestCase
+{
+    protected PhotoPolicy $policy;
+    protected User $user;
+    protected User $owner;
+    protected $resource;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->policy = new PhotoPolicy();
+        $this->user = Mockery::mock(User::class);
+        $this->owner = Mockery::mock(User::class);
+        $this->resource = Mockery::mock(Photo::class);
+    }
+}
+```
+
+### Test Method Naming
+Follow the pattern: `test{MethodName}{Scenario}{ExpectedResult}`
+```php
+public function testViewAnyWithModeratePermission(): void
+public function testViewWithoutPermission(): void
+public function testDeleteOwnUnapprovedWithModeratorSetting(): void
+```
+
+## Mocking Patterns
+
+### Multiple Interface Mocking
+```php
+// CORRECT: Pass each interface as separate arguments
+$mock = Mockery::mock(User::class, HasPrivacyMember::class, HasCoverMorph::class);
+
+// INCORRECT: Don't pass interfaces as an array
+$mock = Mockery::mock(User::class, [HasPrivacyMember::class, HasCoverMorph::class]); // Wrong!
+```
+
+### Property Access
+1. Direct Properties (Non-Laravel Models):
+```php
+// CORRECT: Direct assignment
+$mock->property = $value;
+
+// INCORRECT: Don't use allows() or shouldReceive()
+$mock->allows(['property' => $value]); // Wrong!
+$mock->shouldReceive('property')->andReturn($value); // Wrong!
+```
+
+2. Laravel Model Properties:
+```php
+// For Laravel accessor
+$model->shouldReceive('getAttribute')
+    ->with('property_name')
+    ->andReturn($value);
+
+// For array access
+$model->shouldReceive('offsetExists')
+    ->with('property_name')
+    ->andReturn(true);
+$model->shouldReceive('offsetGet')
+    ->with('property_name')
+    ->andReturn($value);
+```
+
+### Permission Mocking
+```php
+// Basic permission check
+$user->shouldReceive('hasPermissionTo')
+    ->with('photo.moderate')
+    ->andReturn(true);
+
+// Super admin check
+$user->shouldReceive('hasSuperAdminRole')
+    ->andReturn(false);
+
+// Multiple permission checks
+$user->shouldReceive('hasPermissionTo')
+    ->with('photo.create')
+    ->andReturn(true);
+$user->shouldReceive('hasPermissionTo')
+    ->with('photo.moderate')
+    ->andReturn(false);
+```
+
+### Privacy Checks
+```php
+// Owner privacy check
+PrivacyPolicy::shouldReceive('checkPermissionOwner')
+    ->with($user, $owner)
+    ->andReturn(true);
+
+// Resource privacy check
+PrivacyPolicy::shouldReceive('checkPermission')
+    ->with($user, $resource)
+    ->andReturn(true);
+
+// User privacy access
+UserPrivacy::shouldReceive('hasAccess')
+    ->with($user, $owner, 'photo.view_browse_photos')
+    ->andReturn(true);
+```
+
+## Common Test Scenarios
+
+### Permission-Based Tests
+1. Test with moderate permission
+2. Test without required permission
+3. Test with owner-specific permissions
+4. Test with super admin role
+
+```php
+public function testWithModeratePermission(): void
+{
+    $this->user->shouldReceive('hasPermissionTo')
+        ->with('resource.moderate')
+        ->andReturn(true);
+
+    $result = $this->policy->someMethod($this->user, $this->resource);
+    $this->assertTrue($result);
+}
+```
+
+### Resource State Tests
+1. Test approved/unapproved states
+2. Test mature content scenarios
+3. Test owner relationships
+4. Test privacy settings
+
+```php
+public function testUnapprovedResource(): void
+{
+    $this->resource->shouldReceive('isApproved')
+        ->andReturn(false);
+
+    $result = $this->policy->someMethod($this->user, $this->resource);
+    $this->assertFalse($result);
+}
+```
+
+### Owner-Based Tests
+1. Test owner matches user
+2. Test owner different from user
+3. Test owner with specific capabilities
+
+```php
+public function testOwnerMatchesUser(): void
+{
+    $this->user->shouldReceive('entityId')
+        ->andReturn(1);
+    
+    $this->resource->shouldReceive('userId')
+        ->andReturn(1);
+
+    $result = $this->policy->someMethod($this->user, $this->resource);
+    $this->assertTrue($result);
+}
+```
+
+## Best Practices
+
+### Test Organization
+1. Group related test cases together
+2. Test both positive and negative scenarios
+3. Test edge cases explicitly
+4. Include error cases
+
+### Mock Setup
+1. Keep mock setup focused and minimal
+2. Use descriptive variable names
+3. Mock only what's necessary
+4. Clean up mocks in tearDown if needed
+
+### Assertions
+1. Use specific assertions
+2. Test single behavior per test
+3. Keep assertions focused
+4. Include meaningful failure messages
+
+### Documentation
+1. Document complex mock setups
+2. Explain non-obvious test scenarios
+3. Include examples for reusable patterns
+4. Note any special considerations
+
+## Common Pitfalls to Avoid
+1. Over-mocking
+2. Incorrect interface implementation
+3. Missing permission checks
+4. Incomplete privacy checks
+5. Improper property access mocking
+6. Missing edge cases
+7. Insufficient error cases
+8. Unclear test names
+9. Complex test setups
+10. Missing cleanup
+
+## Testing Checklist
+- [ ] All policy methods are tested
+- [ ] Both positive and negative scenarios covered
+- [ ] Permission checks properly mocked
+- [ ] Privacy checks included
+- [ ] Property access correctly handled
+- [ ] Edge cases covered
+- [ ] Error cases included
+- [ ] Tests are properly named
+- [ ] Mock setup is clean and focused
+- [ ] Cleanup handled if needed

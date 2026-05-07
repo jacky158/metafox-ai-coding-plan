@@ -1,0 +1,30 @@
+---
+description: React/TSX components — MUI usage, handler naming, types, a11y
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Components
+
+## UI
+
+- Prefer **MUI** primitives (`Box`, `Stack`, `Button`, `Typography`, …) and the **`sx` prop** or `styled()` from `@mui/material`.
+- Do not introduce Tailwind unless the file already uses it.
+- Use Emotion (`@emotion/react`, `@emotion/styled`) only via MUI's `styled()` helper for consistency.
+
+## Events
+
+- Name DOM event handlers with a `handle` prefix (`handleClick`, `handleSubmit`, `handleKeyDown`).
+- Use `const` arrow functions for handlers and components, matching adjacent files.
+
+```tsx
+const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  // ...
+};
+```
+
+## Types & a11y
+
+- Define explicit types for props and public component APIs; avoid `any` without a strong reason.
+- Prefer early returns for guard clauses.
+- Add `data-testid` where the codebase does, semantic HTML, and `aria-*` / keyboard support for custom interactive controls.

@@ -1,0 +1,33 @@
+---
+description: Push notification — FCM, devices, channels (MetaFox backend)
+globs: "**/packages/framework/notification/**/*.php"
+alwaysApply: false
+---
+
+# Push notification (backend)
+
+## Related
+
+- Unit tests for notification classes: [unit-testing-notification.mdc](.cursor/rules/manual/unit-testing-notification.mdc)
+- Device / token registration lives under **`authorization`**, not `notification` — apply this rule by context or `@` when editing those files.
+
+## Configuration
+
+- Firebase: [`config/firebase.php`](config/firebase.php) — `FIREBASE_SERVER_KEY`, `FIREBASE_PROJECT_ID`, `FIREBASE_APP_ID`, etc.
+- Runtime: `app('firebase.fcm')` — **`addUserDeviceGroup`**, **`removeUserDeviceGroup`** (see [`DeviceController::store`](packages/framework/authorization/src/Http/Controllers/Api/v1/DeviceController.php), [`DeviceRepository`](packages/framework/authorization/src/Repositories/Eloquent/DeviceRepository.php)).
+
+## Device API
+
+- **POST** device: validation in [`StoreRequest`](packages/framework/authorization/src/Http/Requests/v1/Device/StoreRequest.php) — `device_token`, `device_id`, `device_uid`, `token_source` (default `firebase`), `platform`, `extra`, …
+- Persist **`token_id`** from current Passport token on store; repository **`updateOrCreateDevice`** dedupes by `device_uid` + `device_token`.
+- Web vs mobile: [`UserDevice`](packages/framework/authorization/src/Models/UserDevice.php) platform constants; [`WebSetting` addItem](packages/framework/authorization/src/Http/Resources/v1/Device/WebSetting.php) binds `authorization.device.store` for SPA.
+
+## Notification classes
+
+- Base: [`MetaFox\Platform\Notifications\Notification`](packages/platform/src/Notifications/Notification.php) — **`via()`** resolves channels via `NotificationManagerInterface`; implement **`toArray()`**, **`callbackMessage()`**, optional **`toMobileMessage()`** for payload shape.
+- Channels: [`MobilepushChannel`](packages/framework/notification/src/Channels/MobilepushChannel.php), [`WebpushChannel`](packages/framework/notification/src/Channels/WebpushChannel.php) — extend/product may replace logging stubs; align payloads with **FCM** and **toMobileMessage**.
+
+## Conventions
+
+- Keep push payload fields consistent with what the web client service worker and mobile apps expect (`title`, `body`, `web_link` / deep links).
+- On logout all devices: tokens removed from FCM groups via repository + `removeUserDeviceGroup`.

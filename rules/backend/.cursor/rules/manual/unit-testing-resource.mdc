@@ -1,0 +1,346 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Unit Testing Resource Rule
+
+## Critical Rules
+
+### Related Rules
+This rule must be used in conjunction with:
+- [Testing General Principles](.cursor/rules/manual/testing-general-principles.mdc) - For fundamental testing principles and practices
+- [Unit Testing Best Practices](.cursor/rules/manual/unit-testing-best-practices.mdc) - For general unit testing best practices
+
+### Base Structure Rules
+1. **Class Extension**
+   - All resource tests MUST extend `Tests\TestCase`
+   - Use proper namespace matching the resource being tested
+   - Include PHPUnit attributes for test dependencies and assertions
+
+2. **Required Methods**
+   ```php
+   class ResourceTest extends TestCase
+   {
+       public function testCreate(): Model
+       {
+           $model = // Create model instance
+           $this->assertInstanceOf(Model::class, $model);
+           return $model;
+       }
+
+       #[Depends('testCreate')]
+       #[DoesNotPerformAssertions]
+       public function testResource(Model $model)
+       {
+           $this->be($model); // Set authenticated user if needed
+           $resource = new Resource($model);
+           $resource->toJson();
+       }
+
+       #[Depends('testCreate')]
+       #[DoesNotPerformAssertions]
+       public function testCollection(Model $model)
+       {
+           $this->be($model);
+           $collection = new ResourceCollection([$model]);
+           $collection->toJson();
+       }
+   }
+   ```
+
+### Naming Conventions
+1. **Class Names**
+   - Test class name MUST match resource name with 'Test' suffix
+   - Resource alias MUST be 'Resource'
+   - Collection alias MUST be 'ResourceCollection'
+   - Model alias MUST be 'Model'
+
+2. **Method Names**
+   - Creation test MUST be named `testCreate()`
+   - Resource test MUST be named `testResource()`
+   - Collection test MUST be named `testCollection()`
+   - Form test MUST be named `testForm()`
+
+### Test Implementation Rules
+
+1. **Model Creation Test**
+   - MUST create necessary model instance
+   - MUST assign roles if needed
+   - SHOULD refresh model state after modifications
+   - MUST assert instance type
+   - MUST return created model
+
+2. **Resource Test**
+   - MUST use `#[Depends('testCreate')]`
+   - MUST use `#[DoesNotPerformAssertions]`
+   - MUST set authenticated user if needed
+   - MUST create resource instance
+   - MUST test JSON serialization
+
+3. **Collection Test**
+   - MUST use `#[Depends('testCreate')]`
+   - MUST use `#[DoesNotPerformAssertions]`
+   - MUST create collection with model array
+   - MUST test JSON serialization
+
+### Form Resource Rules
+```php
+class FormTest extends TestCase
+{
+    #[DoesNotPerformAssertions]
+    public function testForm()
+    {
+        $resource = new FormResource([]);
+        $resource->toJson();
+    }
+}
+```
+
+1. **Form Testing Requirements**
+   - MUST test empty form creation
+   - NO model instance required
+   - MUST focus on form structure validation
+   - MUST use `#[DoesNotPerformAssertions]`
+
+### Best Practices
+
+1. **Type Safety**
+   - Use proper type hints
+   - Use return type declarations
+   - Follow PHP 8.2+ type system
+
+2. **Test Organization**
+   - Use PHPUnit attributes for dependencies
+   - Use PHPUnit attributes for assertions
+   - Follow test method order: create -> resource -> collection
+
+3. **Authentication**
+   - Set proper authentication context using `$this->be()`
+   - Clear authentication after test if needed
+   - Handle guest user cases appropriately
+
+4. **Model State**
+   - Refresh model state after modifications
+   - Use factory methods for model creation
+   - Clean up created models after tests
+
+5. **Documentation**
+   - Include proper docblocks
+   - Add `@return` annotations
+   - Document test dependencies
+
+### Common Patterns
+
+1. **Basic Resource Test**
+```php
+use PHPUnit\Framework\Attributes\Depends;
+use PHPUnit\Framework\Attributes\DoesNotPerformAssertions;
+use Tests\TestCase;
+
+class ResourceTest extends TestCase
+{
+    public function testCreate(): Model
+    {
+        $model = // Create model
+        $this->assertInstanceOf(Model::class, $model);
+        return $model;
+    }
+
+    #[Depends('testCreate')]
+    #[DoesNotPerformAssertions]
+    public function testResource(Model $model)
+    {
+        $resource = new Resource($model);
+        $resource->toJson();
+    }
+}
+```
+
+2. **Form Resource Test**
+```php
+class FormTest extends TestCase
+{
+    #[DoesNotPerformAssertions]
+    public function testForm()
+    {
+        $resource = new FormResource([]);
+        $resource->toJson();
+    }
+}
+```
+
+### Error Handling
+1. **Model Creation**
+   - Handle factory failures
+   - Handle role assignment failures
+   - Handle refresh failures
+
+2. **Resource Testing**
+   - Handle serialization failures
+   - Handle authentication failures
+   - Handle missing dependencies
+
+# Resource Testing Guidelines
+
+## Core Principles
+
+### Resource Types and Test Structure
+1. Detail Resources
+   ```php
+   class DetailTest extends TestCase 
+   {
+       public function testCreate(): Model
+       {
+           $model = Model::factory()->create();
+           $this->assertInstanceOf(Model::class, $model);
+           return $model;
+       }
+
+       #[Depends('testCreate')]
+       #[DoesNotPerformAssertions]
+       public function testResource(Model $model)
+       {
+           $this->be($this->createUser()->assignRole(UserRole::ADMIN_USER_ID));
+           $resource = new Resource($model);
+           $resource->toJson();
+       }
+   }
+   ```
+
+2. Item Resources with Collections
+   ```php
+   class ItemTest extends TestCase 
+   {
+       public function testCreate(): Model
+       {
+           $model = Model::factory()->create();
+           $this->assertInstanceOf(Model::class, $model);
+           return $model;
+       }
+
+       #[Depends('testCreate')]
+       #[DoesNotPerformAssertions]
+       public function testResource(Model $model)
+       {
+           $this->be($this->createUser()->assignRole(UserRole::ADMIN_USER_ID));
+           $resource = new Resource($model);
+           $resource->toJson();
+       }
+
+       #[Depends('testCreate')]
+       #[DoesNotPerformAssertions]
+       public function testCollection(Model $model)
+       {
+           $this->be($this->createUser()->assignRole(UserRole::ADMIN_USER_ID));
+           $collection = new ResourceCollection([$model]);
+           $collection->toJson();
+       }
+   }
+   ```
+
+3. Form Resources
+   a. Simple Forms (without DI)
+   ```php
+   class SimpleFormTest extends TestCase
+   {
+       use TestResourceForm;
+
+       function getFormName(): string
+       {
+           return Resource::class;
+       }
+
+       #[DoesNotPerformAssertions]
+       public function testForm()
+       {
+           $resource = Model::factory()->create();
+           $form = new Resource($resource);
+           $form->toJson();
+       }
+   }
+   ```
+
+   b. Forms with Dependency Injection
+   ```php
+   class DIFormTest extends TestCase
+   {
+       use TestResourceForm;
+
+       function getFormName(): string
+       {
+           return Resource::class;
+       }
+
+       #[DoesNotPerformAssertions]
+       public function testForm()
+       {
+           $resource = Model::factory()->create();
+           /** @var Resource $form */
+           $form = resolve($this->getFormName(), ['resource' => $resource]);
+           $this->app->call([$form, 'boot'], ['id' => $resource->id]);
+           $form->toJson();
+       }
+   }
+   ```
+
+4. WebSetting Resources
+   ```php
+   class WebSettingTest extends TestCase
+   {
+       use TestResourceSetting;
+
+       function getSettingName(): string
+       {
+           return Resource::class;
+       }
+   }
+   ```
+
+### Key Testing Rules
+
+1. Model Creation
+   - Always use `create()` instead of `makeOne()` for database persistence
+   - Ensure factory definitions include all required fields
+   - Handle unique constraints in factory definitions
+
+2. Authentication
+   - Use `UserRole::ADMIN_USER_ID` for admin access
+   - Set authentication context with `$this->be($this->createUser()->assignRole())`
+
+3. Resource Testing
+   - Use `toJson()` for regular resources
+   - Use `toArray()` for WebSetting resources
+   - Handle dependency injection properly with `resolve()` and `$this->app->call()`
+
+4. Test Attributes
+   - Use `#[Depends()]` for test dependencies
+   - Use `#[DoesNotPerformAssertions]` for resource conversion tests
+
+5. Form Testing
+   - Use `TestResourceForm` trait for form resources
+   - Use `TestResourceSetting` trait for WebSetting resources
+   - Initialize forms properly based on their type (DI vs non-DI)
+
+### Best Practices
+
+1. Factory Definitions
+   - Include all required fields
+   - Handle unique constraints
+   - Use faker for dynamic data
+   - Set sensible defaults
+
+2. Resource Testing
+   - Test both individual resources and collections
+   - Verify proper authorization
+   - Handle dependencies correctly
+
+3. Form Testing
+   - Test both creation and editing scenarios
+   - Handle validation properly
+   - Test with valid and invalid data
+
+4. Error Handling
+   - Test error scenarios
+   - Verify proper error messages
+   - Handle exceptions appropriately

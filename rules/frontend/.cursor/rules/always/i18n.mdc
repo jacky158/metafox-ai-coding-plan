@@ -1,0 +1,28 @@
+---
+description: MetaFox i18n — phrase keys, formatMessage, locale resolution, moment locales
+alwaysApply: true
+---
+
+# i18n (MetaFox frontend)
+
+User-facing copy must come from the phrase system, not hard-coded English.
+
+## Usage
+
+```tsx
+const { i18n } = useGlobal();
+const label = i18n.formatMessage({ id: 'core.feature.label' });
+```
+
+- Format messages with `i18n.formatMessage`; phrase keys are loaded by the `metafox-intl` saga (`core/translation/{group}/auto/{revision}`) and merged into Redux `intl.messages`.
+- Locale is resolved in this order: session `language_id` → `userLanguage` cookie/preference → `detectBrowserLanguage` (`packages/framework/metafox-utils/src/detectBrowserLanguage.ts`) → `MFOX_LOCALE`.
+- The HTTP layer sends `X-Language` from the `userLanguage` cookie via `RestClient` so the Laravel backend's `App::getLocale()` matches the SPA.
+
+## Moment locales
+
+If a feature relies on a Moment locale that isn't already imported, register it in `packages/framework/metafox-intl/src/momentLocales.ts`. Otherwise `moment.locale(...)` falls back to `en`.
+
+## Don't
+
+- Don't embed user-facing English strings inline. Add a phrase key to the relevant module's messages.
+- Don't bypass `i18n.formatMessage` with raw `Intl.*` calls in component render paths unless the codebase already does.

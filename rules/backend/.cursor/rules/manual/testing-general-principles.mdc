@@ -1,0 +1,102 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Testing General Principles Rule
+
+## Critical Rules
+
+### General Principles
+1. **Test Isolation**: Each test should be completely isolated from others. Avoid dependencies between tests.
+2. **Database Abuse**: Avoid direct database interactions in unit tests. Use mocks and stubs instead.
+   - ❌ Bad: Tests that directly query the database
+   - ✅ Good: Tests that mock database interactions using repository patterns
+   ```php
+   // ❌ Bad: Direct database query
+   $user = User::where('email', 'test@example.com')->first();
+   $this->assertEquals('John', $user->name);
+
+   // ✅ Good: Mocked repository
+   $userRepository = $this->partialMock(UserRepositoryInterface::class);
+   $userRepository->shouldReceive('findByEmail')
+       ->with('test@example.com')
+       ->once()
+       ->andReturn(new User(['name' => 'John']));
+   $this->app->instance(UserRepositoryInterface::class, $userRepository);
+   ```
+3. **Test Naming**: Use descriptive names that explain what is being tested and the expected outcome.
+4. **Single Responsibility**: Each test should verify one specific behavior or scenario.
+5. **Arrange-Act-Assert**: Structure tests in three clear sections.
+6. **Mock External Dependencies**: Use mocks for external services, databases, and file systems.
+7. **Test Coverage**: Aim for high test coverage, especially for critical business logic.
+8. **Use Test Doubles**: Utilize mocks, stubs, and spies appropriately.
+9. **Avoid Test Interdependence**: Tests should not rely on the state from other tests.
+10. **Clean Up**: Ensure tests clean up after themselves and don't leave side effects.
+
+### Test Structure
+1. **Setup**: Use `setUp()` for common test initialization.
+2. **Teardown**: Use `tearDown()` for cleanup.
+3. **Test Methods**: Follow the pattern `test[MethodName][Scenario]`.
+4. **Assertions**: Use specific assertions that clearly express intent.
+
+### Mocking
+1. **Use Partial Mocks**: Prefer `partialMock()` over full mocks when possible.
+2. **Mock Facades**: Use `partialMock()` for facades.
+3. **Mock Repositories**: Use `partialMock()` for repositories.
+4. **Mock Models**: Use `partialMock()` for models.
+5. **Mock Services**: Use `partialMock()` for services.
+6. **Mock File System**: Use `partialMock()` for file system operations.
+7. **Mock HTTP Clients**: Use `partialMock()` for HTTP clients.
+8. **Mock Events**: Use `partialMock()` for events.
+9. **Mock Notifications**: Use `partialMock()` for notifications.
+10. **Mock Jobs**: Use `partialMock()` for jobs.
+
+### Assertions
+1. **Use Specific Assertions**: Choose assertions that clearly express intent.
+2. **Avoid Complex Assertions**: Break down complex assertions into simpler ones.
+3. **Use Custom Assertions**: Create custom assertions for common patterns.
+4. **Use Data Providers**: Use data providers for testing multiple scenarios.
+5. **Use Test Doubles**: Use test doubles for external dependencies.
+
+### Test Data
+1. **Use Factories**: Use factories for creating test data.
+2. **Use Faker**: Use Faker for generating realistic test data.
+3. **Use Constants**: Use constants for test data that doesn't change.
+4. **Use Data Providers**: Use data providers for testing multiple scenarios.
+5. **Use Test Doubles**: Use test doubles for external dependencies.
+
+### Test Organization
+1. **Group Related Tests**: Use test classes to group related tests.
+2. **Use Test Suites**: Use test suites to organize test classes.
+3. **Use Test Categories**: Use test categories to organize test suites.
+4. **Use Test Tags**: Use test tags to organize test categories.
+5. **Use Test Filters**: Use test filters to run specific tests.
+
+### Test Execution
+1. **Run Tests in Isolation**: Run tests in isolation to avoid interference.
+2. **Run Tests in Parallel**: Run tests in parallel to speed up execution.
+3. **Run Tests in CI**: Run tests in CI to catch issues early.
+4. **Run Tests in Staging**: Run tests in staging to catch environment-specific issues.
+5. **Run Tests in Production**: Run tests in production to catch production-specific issues.
+
+### Test Maintenance
+1. **Keep Tests Simple**: Keep tests simple and easy to understand.
+2. **Keep Tests Fast**: Keep tests fast to encourage frequent runs.
+3. **Keep Tests Reliable**: Keep tests reliable to avoid false positives.
+4. **Keep Tests Maintainable**: Keep tests maintainable to avoid technical debt.
+5. **Keep Tests Up-to-date**: Keep tests up-to-date with code changes.
+
+### Test Documentation
+1. **Document Test Purpose**: Document the purpose of each test.
+2. **Document Test Scenarios**: Document the scenarios being tested.
+3. **Document Test Data**: Document the test data being used.
+4. **Document Test Dependencies**: Document the dependencies of each test.
+5. **Document Test Results**: Document the expected results of each test.
+
+### Test Review
+1. **Review Test Coverage**: Review test coverage to ensure critical paths are tested.
+2. **Review Test Quality**: Review test quality to ensure tests are effective.
+3. **Review Test Performance**: Review test performance to ensure tests are efficient.
+4. **Review Test Maintenance**: Review test maintenance to ensure tests are maintainable.
+5. **Review Test Documentation**: Review test documentation to ensure tests are well-documented.
